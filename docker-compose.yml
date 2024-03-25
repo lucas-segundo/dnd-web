@@ -1,0 +1,14 @@
+version: '3.5'
+
+services:
+  app:
+    command: ${DOCKER_COMPOSE_COMMAND}
+    build:
+      context: .
+      target: ${DOCKER_COMPOSE_TARGET}
+    ports:
+      - '3000:3000'
+      - '9229:9229'
+    volumes:
+      - .:/app
+      - /app/node_modules/

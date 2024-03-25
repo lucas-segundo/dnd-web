@@ -1,0 +1,70 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  ci:
+    environment: ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Up Containers
+        run: docker compose up -d
+        env:
+          DOCKER_COMPOSE_COMMAND: ${{ vars.DOCKER_COMPOSE_COMMAND }}
+          DOCKER_COMPOSE_TARGET: ${{ vars.DOCKER_COMPOSE_TARGET }}
+
+      - name: Run unit tests
+        run: docker compose exec app pnpm test
+
+      - name: Down Containers
+        run: docker compose down
+
+  cd:
+    needs: ci
+    environment: ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v3
+        name: Install pnpm
+        with:
+          version: 8
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build
+        env:
+          VITE_DND_API_URL: ${{ vars.VITE_DND_API_URL }}
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: 'dist/'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
